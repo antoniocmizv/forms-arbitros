@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grabadora de Audio</title>
+</head>
+<body>
+  <h1>Grabadora de Audio</h1>
+  <button id="startRecord">Iniciar Grabación</button>
+  <button id="stopRecord" disabled>Detener Grabación</button>
+  <audio id="audioPlayback" controls></audio>
+  <form id="uploadForm">
+    <input type="file" id="audioFile" name="audioFile" accept="audio/*" hidden>
+    <button type="submit" id="uploadButton" disabled>Subir Audio</button>
+  </form>
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    document.getElementById('startRecord').onclick = async () => {
+      let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+      mediaRecorder.onstop = () => {
+        let audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        let audioUrl = URL.createObjectURL(audioBlob);
+        document.getElementById('audioPlayback').src = audioUrl;
+        document.getElementById('audioFile').files = new File([audioBlob], 'audio.wav');
+        document.getElementById('uploadButton').disabled = false;
+      };
+      mediaRecorder.start();
+      document.getElementById('startRecord').disabled = true;
+      document.getElementById('stopRecord').disabled = false;
+    };
+
+    document.getElementById('stopRecord').onclick = () => {
+      mediaRecorder.stop();
+      document.getElementById('startRecord').disabled = false;
+      document.getElementById('stopRecord').disabled = true;
+    };
+
+    document.getElementById('uploadForm').onsubmit = async (event) => {
+      event.preventDefault();
+      let file = document.getElementById('audioFile').files[0];
+      let formData = new FormData();
+      formData.append('audioFile', file);
+
+      let response = await fetch('URL_DEL_TU_SCRIPT_WEB_APP', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        let responseText = await response.text();
+        alert('Archivo subido correctamente');
+        prompt("Copia el enlace y pégalo en el formulario:", responseText);
+      } else {
+        alert('Error al subir el archivo');
+      }
+    };
+  </script>
+</body>
+</html>
